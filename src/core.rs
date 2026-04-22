@@ -67,6 +67,7 @@ pub struct ImageHeader {
     pub interlace: bool,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ColorType {
     Grayscale,
     Rgb,
@@ -87,13 +88,16 @@ impl ColorType {
     }
 }
 
+#[derive(Debug)]
 pub enum PngError {
     InvalidSignature,
     UnexpectedEof,
     InvalidChunk,
-    UnkownColorType(u8),
+    UnknownColorType(u8),
     InvalidIhdr,
     CrcMismatch,
+    ZlibError,
+    FilterError,
 }
 
 pub fn parse_ihdr(chunk: &Chunk) -> Result<ImageHeader, PngError> {
@@ -111,7 +115,7 @@ pub fn parse_ihdr(chunk: &Chunk) -> Result<ImageHeader, PngError> {
         3 => ColorType::Indexed,
         4 => ColorType::GrayscaleAlpha,
         6 => ColorType::Rgba,
-        n => return Err(PngError::UnkownColorType(n)),
+        n => return Err(PngError::UnknownColorType(n)),
     };
 
     let interlace = match d[12] {
@@ -130,7 +134,7 @@ pub fn parse_ihdr(chunk: &Chunk) -> Result<ImageHeader, PngError> {
 }
 
 pub fn collect_idat<'a>(
-    chunks: impl Iterator<Item = Result<CHunk<'a>, PngError>>,
+    chunks: impl Iterator<Item = Result<Chunk<'a>, PngError>>,
 ) -> Result<Vec<u8>, PngError> {
     let mut buf = Vec::new();
     for chunk in chunks {
