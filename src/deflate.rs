@@ -223,6 +223,7 @@ fn decode_symbols(
 
     loop {
         let sym = lit_tree.decode(reader)?;
+        println!("Decoded symbol: {}", sym);
         match sym {
             0..=255 => output.push(sym as u8),
             256 => break,
@@ -240,6 +241,7 @@ fn decode_symbols(
             _ => return Err(DeflateError::InvalidSymbol),
         }
     }
+    println!("Finished decoding block, output size: {}", output.len());
     Ok(())
 }
 
@@ -306,9 +308,10 @@ fn decode_dynamic(reader: &mut BitReader, output: &mut Vec<u8>) -> Result<(), De
             }
             16 => {
                 // Repeat previous code length 3-6 times
-                let prev = *lit_dist_lengths
-                    .last()
-                    .ok_or(DeflateError::InvalidHuffmanTree)?;
+                if i == 0 {
+                    return Err(DeflateError::InvalidHuffmanTree);
+                }
+                let prev = lit_dist_lengths[i - 1];
                 let repeat = reader.read_bits(2)? as usize + 3;
                 for _ in 0..repeat {
                     lit_dist_lengths[i] = prev;
